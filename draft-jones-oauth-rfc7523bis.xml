@@ -114,7 +114,9 @@
         authentication is orthogonal to and separable from using a security token as an
         authorization grant.  They can be used either in combination or separately.
         Client authentication using a JWT is nothing more than an alternative way for a client to authenticate
-        to the token endpoint and must be used in conjunction with some grant type to form a complete and
+        to the token endpoint or other endpoints
+	such as the pushed authorization endpoint <xref target="RFC9126"/>
+	and must be used in conjunction with some grant type to form a complete and
         meaningful protocol request. JWT authorization grants may be used with or without client authentication
         or identification. Whether or not client authentication is needed in conjunction with a JWT authorization
         grant, as well as the supported types of client authentication, are policy decisions at the discretion of the authorization server.
@@ -265,20 +267,23 @@
 	  </t>
 	  <t>
 	    The JWT MUST contain an <spanx style="verb">aud</spanx>
-	    (audience) claim containing a value that
-	    identifies the authorization server as an intended audience.
-	    The token endpoint URL of the authorization server MAY be used as a
-	    value for an <spanx style="verb">aud</spanx> element to identify
-	    the authorization server as an intended audience of the JWT.
+	    (audience) claim containing
+	    the issuer identifier <xref target="RFC8414"/>
+	    of the authorization server as its sole value.
+	    The authorization server MUST have an issuer identifier
+	    to be used with this specification.
+	    Unlike the <spanx style="verb">aud</spanx> value specified
+	    in <xref target="RFC7523"/>, there MUST be no value other than
+	    the issuer identifier of the intended authorization server
+	    used as the audience of the JWT;
+	    this includes that the token endpoint URL of the authorization server
+	    MUST NOT be used as an audience value.
       The authorization server MUST reject any JWT that does not
-      contain its own identity as the intended audience.
+      contain its issuer identifier as its sole audience value.
       In the absence of an application profile specifying
       otherwise, compliant applications MUST compare the audience
       values using the Simple String Comparison method defined in Section
       6.2.1 of RFC 3986 <xref target="RFC3986"/>.
-      As noted in <xref target="Interoperability"/>, the precise strings to be used
-      as the audience for a given authorization server must be configured out of band
-      by the authorization server and the issuer of the JWT.
 	  </t>
 	  <t>
 	    The JWT MUST contain an <spanx style="verb">exp</spanx>
@@ -383,8 +388,8 @@
 	The example shows a JWT issued and signed by the system entity identified as
 	<spanx style='verb'>https://jwt-idp.example.com</spanx>.
 	The subject of the JWT is identified by email address as <spanx style='verb'>mike@example.com</spanx>.
-	The intended audience of the JWT is <spanx style='verb'>https://jwt-rp.example.net</spanx>,
-	which is an identifier with which the authorization server identifies itself.
+	The intended audience of the JWT is <spanx style='verb'>https://authz.example.net</spanx>,
+	which is the authorization server's issuer identifier.
 	The JWT is sent as part of an access token request to the authorization server's
 	token endpoint at <spanx style='verb'>https://authz.example.net/token.oauth2</spanx>.
       </t>
@@ -396,10 +401,11 @@
 	<artwork><![CDATA[
   {"iss":"https://jwt-idp.example.com",
    "sub":"mailto:mike@example.com",
-   "aud":"https://jwt-rp.example.net",
-   "nbf":1300815780,
-   "exp":1300819380,
-   "http://claims.example.com/member":true}
+   "aud":"https://authz.example.net",
+   "iat":1731721541,
+   "exp":1731725141,
+   "http://claims.example.com/member":true
+  }
 ]]></artwork>
       </figure>
 
@@ -439,8 +445,8 @@
       <t>
 	Agreement between system entities regarding identifiers,
 	keys, and endpoints is required in order to achieve interoperable
-	deployments of this profile. Specific items that require agreement are as follows:
-	values for the issuer and audience identifiers, the location of the token endpoint, the key used to
+	deployments of this profile. Specific items that require agreement include
+	values for the issuer identifiers, the locations of endpoints, the key used to
 	apply and verify the digital signature or MAC over the JWT, one-time use restrictions on the JWT,
   maximum JWT lifetime allowed, and the specific subject and claim requirements of the JWT.
 	The exchange of such information is explicitly out of scope for this specification.
@@ -448,6 +454,7 @@
 	how they are to be exchanged.
 	Examples of such profiles include
 	the OAuth 2.0 Dynamic Client Registration Protocol <xref target="RFC7591"/>,
+	OAuth 2.0 Authorization Server Metadata <xref target="RFC8414"/>,
 	OpenID Connect Dynamic Client Registration 1.0 <xref target="OpenID.Registration"/>,
 	and OpenID Connect Discovery 1.0 <xref target="OpenID.Discovery"/>.
       </t>
@@ -471,6 +478,11 @@
         The specification does not mandate replay protection for the JWT
         usage for either the authorization grant or for client
         authentication. It is an optional feature, which implementations may employ at their own discretion.
+     </t>
+     <t>
+       This specification tightens the JWT audience requirements to prevent attacks
+       that could result from exploiting audience ambiguities
+       allowed by <xref target="RFC7523"/>.
      </t>
 
     </section>
@@ -515,6 +527,7 @@
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7159.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7521.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
+      <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8414.xml"/>
 
       <!-- Reference from https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7518.xml with change to anchor="JWA" -->
 
@@ -555,6 +568,8 @@
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7522.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7523.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7591.xml"/>
+      <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
+
       <reference anchor="OpenID.Registration" target="https://openid.net/specs/openid-connect-registration-1_0.html">
 	<front>
 	  <title>OpenID Connect Dynamic Client Registration 1.0 incorporating errata set 2</title>
@@ -617,6 +632,9 @@
 	    removing the IANA actions already performed,
 	    and adding the Document History section.
           </t>
+	  <t>
+	    Use AS issuer identifier as the sole audience value.
+	  </t>
         </list>
       </t>
 
